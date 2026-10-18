@@ -287,7 +287,7 @@ const CLAVE = "loa05_borrador_v2";
    al que aparece en el Apps Script.
    ========================================================================= */
 const DRIVE_CONFIG = {
-  url: "https://script.google.com/macros/s/AKfycbxAoY-WctVUs4-Tn9PyxN23qEQVju3TZ2iDBWC9fWSfclt70GwjFvwRrwv0SzjBCZvU/exec",
+  url: "https://script.google.com/macros/s/AKfycbyEuHfU8LpxTfLQNPMloZZf3gUcy07UM6zvxml4P8vsn1xltMNqNBEZjn8zNEzsXYiZ/exec",
   secret: "LOA05-CAE-2026"
 };
 
@@ -685,23 +685,19 @@ async function enviarADrive(zipBytes, nombre, d){
   if(!DRIVE_CONFIG.url){ return; }
   try{
     const rais = leerRAIs();
-    const payload = {
-      secret: DRIVE_CONFIG.secret,
-      filename: nombre,
-      docxBase64: bytesABase64(zipBytes),
-      meta: {
-        campus:d.campus, college:d.college, program:d.program, semester:d.semester,
-        crn:d.crn, codificacion:d.codificacion, seccion:d.seccion, curso:d.curso, profesor:d.profesor,
-        cantRais: String(rais.length),
-        raisList: rais.map(r => (r.rai||'').split(/\r?\n/)[0].slice(0,50)).join(' | '),
-        decano:d.decano
-      }
+    const meta = {
+      campus:d.campus, college:d.college, program:d.program, semester:d.semester,
+      crn:d.crn, codificacion:d.codificacion, seccion:d.seccion, curso:d.curso, profesor:d.profesor,
+      cantRais: String(rais.length),
+      raisList: rais.map(r => (r.rai||'').split(/\r?\n/)[0].slice(0,50)).join(' | '),
+      decano:d.decano
     };
-    await fetch(DRIVE_CONFIG.url, {
-      method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify(payload)
-    });
+    const fd = new FormData();
+    fd.append('secret', DRIVE_CONFIG.secret);
+    fd.append('filename', nombre);
+    fd.append('docxBase64', bytesABase64(zipBytes));
+    fd.append('meta', JSON.stringify(meta));
+    await fetch(DRIVE_CONFIG.url, { method:'POST', mode:'no-cors', body: fd });
     estado.textContent='Documento generado y enviado a Google Drive: '+nombre;
     estado.className='estado ok';
   }catch(err){
