@@ -310,6 +310,21 @@ const CAMPOS_RAI = {
   estrategiaAccion:'Estrategia a implementar o acción tomada'
 };
 
+/* Los 11 Resultados de Aprendizaje Institucional (RAI) de la PUCPR */
+const RAIS_INSTITUCIONALES = [
+  "RAI 1 — Demuestra su compromiso con el desarrollo social, el servicio a la comunidad y el voluntariado.",
+  "RAI 2 — Construye su integridad moral y sus valores éticos, cívicos y estéticos basados en la Doctrina Social de la Iglesia.",
+  "RAI 3 — Emplea el pensamiento crítico y creativo en el desarrollo y análisis del conocimiento.",
+  "RAI 4 — Utiliza las técnicas creativas para la solución de problemas y toma de decisiones.",
+  "RAI 5 — Demuestra el dominio, habilidad y destrezas para comunicarse efectivamente en diferentes escenarios, tanto en español como en inglés.",
+  "RAI 6 — Posee una visión empresarial y global, así como el conocimiento en literacia financiera que lo capacitan para el manejo de sus recursos y para desarrollar iniciativas económicas, sociales y culturales.",
+  "RAI 7 — Demuestra sensibilidad multicultural ante un mundo globalizado.",
+  "RAI 8 — Conoce y utiliza la tecnología como herramienta de aprendizaje.",
+  "RAI 9 — Posee destrezas de literacia de la información que motivan el aprendizaje permanente y a su crecimiento personal.",
+  "RAI 10 — Domina las destrezas de razonamiento cuantitativo para el manejo de información matemática, estadística y científica.",
+  "RAI 11 — Demuestra destrezas de investigación que generan nuevos conocimientos y estimula acciones innovadoras y de impacto social."
+];
+
 let raiSeq = 0;
 
 /* ---------- Plantilla de un bloque RAI ---------- */
@@ -318,20 +333,22 @@ function plantillaRAI(idx, d){
   const tm = v => d.tipoMedida===v ? ' checked' : '';
   const g = k => d[k] ? String(d[k]).replace(/"/g,'&quot;') : '';
   const gt = k => d[k] ? String(d[k]).replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+  const opcionesRAI = ['<option value="">— Seleccione un RAI —</option>'].concat(
+    RAIS_INSTITUCIONALES.map(r =>
+      '<option value="'+r.replace(/"/g,'&quot;')+'"'+(d.rai===r?' selected':'')+'>'+r.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</option>')
+  ).join('');
   return `
   <div class="cuerpo">
     <div class="grid">
-      <div class="grid dos">
-        <div class="campo">
-          <label>RAI # y redacción <span class="req">*</span></label>
-          <span class="ayuda">Número del RAI evaluado. Si lo tiene disponible, incluya su redacción.</span>
-          <textarea data-field="rai" placeholder="Ej.: RAI 3 — El egresado aplica el razonamiento cuantitativo para la toma de decisiones.">${gt('rai')}</textarea>
-        </div>
-        <div class="campo">
-          <label>Objetivo del curso alineado al RAI <span class="req">*</span></label>
-          <span class="ayuda">Copie del prontuario el objetivo del curso que se evaluó y que está alineado con este RAI.</span>
-          <textarea data-field="objetivo" placeholder="Objetivo del curso, en oración completa.">${gt('objetivo')}</textarea>
-        </div>
+      <div class="campo">
+        <label>RAI — Resultado de Aprendizaje Institucional <span class="req">*</span></label>
+        <span class="ayuda">Seleccione el RAI que se avaluó en este curso.</span>
+        <select data-field="rai">${opcionesRAI}</select>
+      </div>
+      <div class="campo">
+        <label>Objetivo del curso alineado al RAI <span class="req">*</span></label>
+        <span class="ayuda">Copie del prontuario el objetivo del curso que se evaluó y que está alineado con este RAI.</span>
+        <textarea data-field="objetivo" placeholder="Objetivo del curso, en oración completa.">${gt('objetivo')}</textarea>
       </div>
       <div class="campo">
         <label>Actividades o estrategias utilizadas <span class="req">*</span></label>
@@ -572,7 +589,7 @@ function construirDocx(d){
     const c1 = (d.rais.length===1)
       ? wCell(cursoCell,{w:cols[0]})
       : (i===0 ? wCell(cursoCell,{w:cols[0],vmerge:'restart'}) : wCell(wPara(''),{w:cols[0],vmerge:'continue'}));
-    const c2 = lv('RAI #:',r.rai)+lv('Objetivo del curso alineado al RAI:',r.objetivo);
+    const c2 = lv('RAI:',r.rai)+lv('Objetivo del curso alineado al RAI:',r.objetivo);
     const c3 = wPara([wRun(r.actividades,{sz:18})]);
     const c4 = lv('Tipo de medida:',r.tipoMedida)
              + lv('Estudiantes evaluados:',r.cantEstudiantes)
@@ -689,7 +706,7 @@ async function enviarADrive(zipBytes, nombre, d){
       campus:d.campus, college:d.college, program:d.program, semester:d.semester,
       crn:d.crn, codificacion:d.codificacion, seccion:d.seccion, curso:d.curso, profesor:d.profesor,
       cantRais: String(rais.length),
-      raisList: rais.map(r => (r.rai||'').split(/\r?\n/)[0].slice(0,50)).join(' | '),
+      raisList: rais.map(r => { const m=(r.rai||'').match(/RAI\s*\d+/i); return m?m[0]:(r.rai||'').slice(0,30); }).join('; '),
       decano:d.decano
     };
     const fd = new FormData();
