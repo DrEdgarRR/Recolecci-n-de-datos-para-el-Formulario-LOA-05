@@ -122,6 +122,22 @@
   .modal h3{margin:0 0 8px;color:var(--azul-oscuro);font-size:1.12rem}
   .modal p{margin:0 0 18px;color:var(--tinta);font-size:.92rem;line-height:1.5}
   .modal-btns{display:flex;gap:10px;justify-content:flex-end}
+  /* Vista previa de firma */
+  input[type=file]{font-family:inherit;font-size:.9rem;padding:8px;border:1px dashed #c7d0dd;border-radius:8px;background:#fafbfd;cursor:pointer;width:100%}
+  .firma-preview{margin-top:8px;display:flex;align-items:center;gap:12px;border:1px solid var(--linea);border-radius:8px;padding:8px 10px;background:#fff}
+  .firma-preview[hidden]{display:none}
+  .firma-preview img{max-height:60px;max-width:220px;border:1px solid #eef1f6;border-radius:4px;background:#fff}
+  .btn-quitar-firma{background:transparent;color:var(--alerta);border:1px solid #e3b9b9;border-radius:7px;padding:6px 12px;font-family:inherit;font-size:.85rem;cursor:pointer}
+  .btn-quitar-firma:hover{background:#fbeeee}
+  /* Lista de evidencias */
+  .evidencia-lista{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+  .evi-item{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--linea);border-radius:8px;padding:8px 12px;background:#fff;font-size:.9rem}
+  .evi-nom{color:var(--tinta);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .evi-st{font-size:.8rem;font-weight:600;white-space:nowrap;flex:none}
+  .evi-st.pend{color:var(--gris)}
+  .evi-st.ok{color:var(--ok)}
+  .evi-st.error{color:var(--alerta)}
+  .btn[disabled]{opacity:.55;cursor:default}
 </style>
 </head>
 <body>
@@ -224,11 +240,32 @@
     <section class="bloque">
       <h2><span class="num">✓</span> Certificación <span class="col">Firmas</span></h2>
       <div class="cuerpo">
-        <p class="ayuda" style="margin-top:0">El profesor que somete el formulario (indicado en la sección Programa / Curso) y el Decano firmarán el documento. Indique aquí el nombre del Decano. En el documento Word cada firma tendrá su línea y un espacio para la fecha.</p>
+        <p class="ayuda" style="margin-top:0">El profesor que somete el formulario (indicado en la sección Programa / Curso) y el Decano firmarán el documento. Indique aquí el nombre del Decano.</p>
         <div class="grid dos">
           <div class="campo">
             <label for="decano">Nombre del Decano <span class="req">*</span></label>
             <input type="text" id="decano" name="decano" placeholder="Nombre del Decano del Colegio o Escuela">
+          </div>
+        </div>
+        <p class="ayuda" style="margin:16px 0 2px"><strong>Firma digital (opcional).</strong> Puede subir una foto o imagen de su firma para insertarla en el documento. Si deja las firmas en blanco, podrá imprimir el documento y firmarlo físicamente. Ambas opciones están disponibles.</p>
+        <div class="grid dos">
+          <div class="campo">
+            <label for="firmaProfesorInput">Firma del profesor (opcional)</label>
+            <span class="ayuda">Foto o imagen de la firma (PNG o JPG). Se inserta sobre la línea de firma del profesor.</span>
+            <input type="file" accept="image/*" id="firmaProfesorInput">
+            <div class="firma-preview" id="firmaProfesorPrev" hidden>
+              <img alt="Firma del profesor">
+              <button type="button" class="btn-quitar-firma" data-firma="profesor">Quitar</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="firmaDecanoInput">Firma del Decano (opcional)</label>
+            <span class="ayuda">Si el Decano firmará físicamente, deje este campo en blanco.</span>
+            <input type="file" accept="image/*" id="firmaDecanoInput">
+            <div class="firma-preview" id="firmaDecanoPrev" hidden>
+              <img alt="Firma del Decano">
+              <button type="button" class="btn-quitar-firma" data-firma="decano">Quitar</button>
+            </div>
           </div>
         </div>
       </div>
@@ -257,6 +294,21 @@
       <span class="estado" id="estado"></span>
     </div>
   </form>
+
+  <section class="bloque" id="evidenciaSec">
+    <h2><span class="num">📎</span> Subir evidencias de avalúo <span class="col">Opcional</span></h2>
+    <div class="cuerpo">
+      <p class="ayuda" style="margin-top:0">Suba aquí la evidencia que respalda los datos del Formulario LOA-05 (por ejemplo: rúbricas, muestras de trabajo, informes de resultados). Puede subir varios archivos en formato <strong>PDF o Word</strong>. Se guardarán en la carpeta del Colegio, en la subcarpeta <strong>“Evidencias LOA-05”</strong>.</p>
+      <p class="ayuda" style="margin:2px 0 10px">Antes de subir, complete al menos la <strong>codificación, sección y profesor</strong> del curso (sección 2), para identificar a quién pertenece cada evidencia. Tamaño máximo por archivo: 15 MB.</p>
+      <div class="campo">
+        <label for="evidenciaInput">Archivos de evidencia (PDF o Word)</label>
+        <input type="file" id="evidenciaInput" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple>
+      </div>
+      <div id="evidenciaLista" class="evidencia-lista"></div>
+      <button type="button" class="btn btn-primario" id="btnSubirEvidencia" style="margin-top:14px">⬆ Subir evidencia(s)</button>
+      <span class="estado" id="estadoEvidencia" style="display:block;margin-left:0;margin-top:12px"></span>
+    </div>
+  </section>
 </main>
 
 <footer class="pie">
@@ -296,6 +348,45 @@ const estado = document.getElementById('estado');
 const avisoVal = document.getElementById('avisoVal');
 const raisContainer = document.getElementById('raisContainer');
 const modalLimpiar = document.getElementById('modalLimpiar');
+
+/* ---------- Firmas digitales (opcionales) ---------- */
+const firmas = { profesor:null, decano:null };
+function previewFirma(cual){
+  const prev = document.getElementById(cual==='profesor'?'firmaProfesorPrev':'firmaDecanoPrev');
+  if(!prev) return;
+  const f = firmas[cual];
+  if(f && f.b64){ prev.querySelector('img').src = 'data:image/png;base64,'+f.b64; prev.hidden = false; }
+  else { prev.querySelector('img').removeAttribute('src'); prev.hidden = true; }
+}
+function cargarFirma(cual, file){
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ estado.textContent='Seleccione un archivo de imagen (foto de la firma).'; estado.className='estado'; return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 360; let w = img.width, h = img.height;
+      if(w > maxW){ h = Math.round(h*maxW/w); w = maxW; }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      try{
+        const url = c.toDataURL('image/png');
+        firmas[cual] = { b64: url.split(',')[1], w: w, h: h };
+        previewFirma(cual); guardar(true);
+        estado.textContent='Firma del '+cual+' cargada.'; estado.className='estado ok';
+      }catch(e){ estado.textContent='No se pudo procesar la imagen.'; estado.className='estado'; }
+    };
+    img.onerror = () => { estado.textContent='El archivo no es una imagen válida.'; estado.className='estado'; };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function quitarFirma(cual){
+  firmas[cual] = null;
+  const input = document.getElementById(cual==='profesor'?'firmaProfesorInput':'firmaDecanoInput');
+  if(input) input.value = '';
+  previewFirma(cual); guardar(true);
+}
 
 const CAMPOS_SIMPLES = {
   campus:'Campus', college:'Colegio o Escuela', program:'Programa académico', semester:'Semestre/Trimestre',
@@ -452,6 +543,7 @@ function datosCompletos(){
   const d = {};
   for(const k in CAMPOS_SIMPLES) d[k] = val(k);
   d.rais = leerRAIs();
+  d.firmas = firmas;
   return d;
 }
 
@@ -467,6 +559,9 @@ function cargar(){
   if(d){
     for(const k in CAMPOS_SIMPLES){ if(form.elements[k] && d[k]!=null) form.elements[k].value = d[k]; }
   }
+  firmas.profesor = (d && d.firmas && d.firmas.profesor) ? d.firmas.profesor : null;
+  firmas.decano   = (d && d.firmas && d.firmas.decano)   ? d.firmas.decano   : null;
+  previewFirma('profesor'); previewFirma('decano');
   raisContainer.innerHTML=''; raiSeq=0;
   const arr = (d && Array.isArray(d.rais) && d.rais.length) ? d.rais : [null];
   arr.forEach(r => crearBloqueRAI(r));
@@ -546,8 +641,22 @@ function wCell(paras,o){
 function lv(label,value){
   return wPara([wRun(label,{bold:true,sz:16})],{after:0}) + wPara([wRun(value,{sz:18})],{after:70});
 }
+/* Imagen en línea (firma): relId de la relación, tamaño en EMU, id único */
+function imgRunDoc(relId, cx, cy, id, name){
+  return '<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
+   +'<wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:effectExtent l="0" t="0" r="0" b="0"/>'
+   +'<wp:docPr id="'+id+'" name="'+name+'"/>'
+   +'<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>'
+   +'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+   +'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+   +'<pic:nvPicPr><pic:cNvPr id="'+id+'" name="'+name+'"/><pic:cNvPicPr/></pic:nvPicPr>'
+   +'<pic:blipFill><a:blip r:embed="'+relId+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+   +'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+   +'</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+}
 
-function construirDocx(d){
+function construirDocx(d, sig){
+  sig = sig || {};
   const EMU_W=1234440, EMU_H=596768;
   const logoRun='<w:r><w:drawing>'
    +'<wp:inline distT="0" distB="0" distL="0" distR="0">'
@@ -610,12 +719,13 @@ function construirDocx(d){
 
   const linea = '________________________________';
   const fechaLinea = '____________________';
+  const firmaRunDe = (s, rol) => s ? imgRunDoc(s.relId, s.cx, s.cy, s.id, 'Firma '+rol) : wRun(linea,{sz:20});
   const certificacion =
     wPara([wRun('Certificación',{bold:true,sz:20})],{before:260,after:60})
    +wPara([wRun('Profesor: ',{sz:20}),wRun(d.profesor,{bold:true,sz:20}),
-           wRun('    Firma: '+linea+'    Fecha: '+fechaLinea,{sz:20})],{before:60,after:160})
+           wRun('    Firma: ',{sz:20}), firmaRunDe(sig.prof,'profesor'), wRun('    Fecha: '+fechaLinea,{sz:20})],{before:60,after:200})
    +wPara([wRun('Decano: ',{sz:20}),wRun(d.decano,{bold:true,sz:20}),
-           wRun('    Firma: '+linea+'    Fecha: '+fechaLinea,{sz:20})],{after:40});
+           wRun('    Firma: ',{sz:20}), firmaRunDe(sig.decano,'decano'), wRun('    Fecha: '+fechaLinea,{sz:20})],{after:40});
 
   const sectPr='<w:sectPr><w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/><w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="360" w:footer="360" w:gutter="0"/></w:sectPr>';
 
@@ -658,10 +768,28 @@ async function generarDoc(){
    +'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
    +'<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
    +'</Relationships>';
+  // Medios (logo + firmas opcionales) y relaciones dinámicas
+  const mediaFiles = [{name:'word/media/image1.png', data:b64ToBytes(LOGO.split(',')[1])}];
+  const sig = {};
+  const emuFit = (w,h)=>{ const maxW=1.7*914400, maxH=0.6*914400; let cx=Math.round(maxW), cy=Math.round(maxW*h/w); if(cy>maxH){ cy=Math.round(maxH); cx=Math.round(maxH*w/h);} return {cx:cx, cy:cy}; };
+  let relSig='';
+  if(firmas.profesor && firmas.profesor.b64){
+    const dim=emuFit(firmas.profesor.w, firmas.profesor.h);
+    mediaFiles.push({name:'word/media/image2.png', data:b64ToBytes(firmas.profesor.b64)});
+    relSig+='<Relationship Id="rIdSigP" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image2.png"/>';
+    sig.prof={relId:'rIdSigP', cx:dim.cx, cy:dim.cy, id:2};
+  }
+  if(firmas.decano && firmas.decano.b64){
+    const dim=emuFit(firmas.decano.w, firmas.decano.h);
+    mediaFiles.push({name:'word/media/image3.png', data:b64ToBytes(firmas.decano.b64)});
+    relSig+='<Relationship Id="rIdSigD" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image3.png"/>';
+    sig.decano={relId:'rIdSigD', cx:dim.cx, cy:dim.cy, id:3};
+  }
   const docRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
    +'<Relationship Id="rIdImg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>'
+   +relSig
    +'</Relationships>';
   const stylesXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
    +'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
@@ -673,7 +801,7 @@ async function generarDoc(){
    +'<dc:title>Formulario LOA-05 · '+xe(d.codificacion)+'</dc:title><dc:creator>'+xe(d.profesor||'PUCPR')+'</dc:creator></cp:coreProperties>';
   const appXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
    +'<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Recolección de datos LOA-05 · PUCPR</Application></Properties>';
-  const documentXml=construirDocx(d);
+  const documentXml=construirDocx(d, sig);
 
   const files=[
     {name:'[Content_Types].xml', data:enc.encode(contentTypes)},
@@ -682,9 +810,8 @@ async function generarDoc(){
     {name:'docProps/app.xml', data:enc.encode(appXml)},
     {name:'word/document.xml', data:enc.encode(documentXml)},
     {name:'word/styles.xml', data:enc.encode(stylesXml)},
-    {name:'word/_rels/document.xml.rels', data:enc.encode(docRels)},
-    {name:'word/media/image1.png', data:b64ToBytes(LOGO.split(',')[1])}
-  ];
+    {name:'word/_rels/document.xml.rels', data:enc.encode(docRels)}
+  ].concat(mediaFiles);
   const zip=zipStore(files);
   const blob=new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
   let nombre=('LOA-05_'+(d.codificacion||'curso')+'_'+(d.seccion||'')).replace(/[^A-Za-z0-9]+/g,'-').replace(/-+/g,'-').replace(/-$/,'')+'.docx';
@@ -749,12 +876,64 @@ function descargaLocal(blob, nombre){
   estado.textContent='Documento generado: '+nombre; estado.className='estado ok';
 }
 
+/* ---------- Subida de evidencias de avalúo ---------- */
+function renderEvidenciaLista(files){
+  const cont=document.getElementById('evidenciaLista');
+  cont.innerHTML = files.map(f=>
+    '<div class="evi-item" data-nom="'+xe(f.name)+'"><span class="evi-nom">'+xe(f.name)+'</span><span class="evi-st pend">En espera…</span></div>'
+  ).join('');
+}
+function marcarEvidencia(nombre, cls, txt){
+  const cont=document.getElementById('evidenciaLista');
+  const item=[...cont.querySelectorAll('.evi-item')].find(el=>el.dataset.nom===nombre);
+  if(item){ const s=item.querySelector('.evi-st'); s.className='evi-st '+cls; s.textContent=txt; }
+}
+async function subirEvidencias(){
+  const estadoE=document.getElementById('estadoEvidencia');
+  const input=document.getElementById('evidenciaInput');
+  const files=input.files ? [...input.files] : [];
+  if(!DRIVE_CONFIG.url){ estadoE.textContent='La subida a Google Drive no está configurada en esta página.'; estadoE.className='estado'; return; }
+  if(!files.length){ estadoE.textContent='Seleccione al menos un archivo de evidencia.'; estadoE.className='estado'; return; }
+  const cod=val('codificacion'), sec=val('seccion'), prof=val('profesor');
+  if(!cod || !sec || !prof){
+    estadoE.textContent='Antes de subir evidencia, complete la codificación, la sección y el profesor del curso (sección 2).';
+    estadoE.className='estado';
+    document.getElementById('codificacion').scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  const prefijo=(cod+'-'+sec+'_'+prof).replace(/[^A-Za-z0-9ÁÉÍÓÚÑáéíóúñ]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  const MAX=15*1024*1024;
+  const btn=document.getElementById('btnSubirEvidencia');
+  btn.disabled=true;
+  renderEvidenciaLista(files);
+  let ok=0, fail=0;
+  for(const f of files){
+    if(f.size>MAX){ marcarEvidencia(f.name,'error','Supera 15 MB'); fail++; continue; }
+    try{
+      const buf=new Uint8Array(await f.arrayBuffer());
+      const b64=bytesABase64(buf);
+      const fd=new FormData();
+      fd.append('action','evidencia');
+      fd.append('secret', DRIVE_CONFIG.secret);
+      fd.append('filename', prefijo+'_'+f.name);
+      fd.append('contentType', f.type||'');
+      fd.append('fileBase64', b64);
+      await fetch(DRIVE_CONFIG.url, {method:'POST', mode:'no-cors', body:fd});
+      marcarEvidencia(f.name,'ok','Enviada ✓'); ok++;
+    }catch(e){ marcarEvidencia(f.name,'error','No se pudo enviar'); fail++; }
+  }
+  btn.disabled=false;
+  estadoE.textContent='Evidencias enviadas: '+ok+(fail?(' · con problemas: '+fail):'')+'. Verifique en la subcarpeta “Evidencias LOA-05”.';
+  estadoE.className = fail ? 'estado' : 'estado ok';
+}
+
 /* ---------- Limpiar ---------- */
 function limpiarFormulario(){
   form.reset();
   document.getElementById('campus').value='Ponce';
   document.getElementById('college').value='Colegio de Administración de Empresas';
   try{ localStorage.removeItem(CLAVE); }catch(e){}
+  quitarFirma('profesor'); quitarFirma('decano');
   raisContainer.innerHTML=''; raiSeq=0; crearBloqueRAI(null);
   estado.textContent='Formulario limpio.'; estado.className='estado';
   avisoVal.classList.remove('visible');
@@ -772,6 +951,11 @@ document.getElementById('modalCancelar').addEventListener('click', ()=>{ modalLi
 document.getElementById('modalConfirmar').addEventListener('click', ()=>{ modalLimpiar.hidden=true; limpiarFormulario(); });
 modalLimpiar.addEventListener('click', (e)=>{ if(e.target===modalLimpiar) modalLimpiar.hidden=true; });
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !modalLimpiar.hidden) modalLimpiar.hidden=true; });
+document.getElementById('firmaProfesorInput').addEventListener('change', e=> cargarFirma('profesor', e.target.files && e.target.files[0]));
+document.getElementById('firmaDecanoInput').addEventListener('change', e=> cargarFirma('decano', e.target.files && e.target.files[0]));
+document.querySelectorAll('.btn-quitar-firma').forEach(b=> b.addEventListener('click', ()=> quitarFirma(b.dataset.firma)));
+document.getElementById('evidenciaInput').addEventListener('change', e=>{ renderEvidenciaLista(e.target.files?[...e.target.files]:[]); document.getElementById('estadoEvidencia').textContent=''; });
+document.getElementById('btnSubirEvidencia').addEventListener('click', subirEvidencias);
 form.addEventListener('input', ()=>{ guardar(true); });
 window.addEventListener('DOMContentLoaded', cargar);
 </script>
