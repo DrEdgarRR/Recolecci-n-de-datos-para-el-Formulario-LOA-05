@@ -299,7 +299,7 @@
     <h2><span class="num">📎</span> Subir evidencias de avalúo <span class="col">Opcional</span></h2>
     <div class="cuerpo">
       <p class="ayuda" style="margin-top:0">Suba aquí la evidencia que respalda los datos del Formulario LOA-05 (por ejemplo: rúbricas, muestras de trabajo, informes de resultados). Puede subir varios archivos en formato <strong>PDF o Word</strong>. Se guardarán en la carpeta del Colegio, en la subcarpeta <strong>“Evidencias LOA-05”</strong>.</p>
-      <p class="ayuda" style="margin:2px 0 10px">Antes de subir, complete al menos la <strong>codificación, sección y profesor</strong> del curso (sección 2), para identificar a quién pertenece cada evidencia. Tamaño máximo por archivo: 15 MB.</p>
+      <p class="ayuda" style="margin:2px 0 10px">Antes de subir, complete al menos el <strong>CRN, la codificación, la sección y el profesor</strong> del curso (sección 2), para identificar a quién pertenece cada evidencia. Tamaño máximo por archivo: 15 MB.</p>
       <div class="campo">
         <label for="evidenciaInput">Archivos de evidencia (PDF o Word)</label>
         <input type="file" id="evidenciaInput" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple>
@@ -814,7 +814,7 @@ async function generarDoc(){
   ].concat(mediaFiles);
   const zip=zipStore(files);
   const blob=new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-  let nombre=('LOA-05_'+(d.codificacion||'curso')+'_'+(d.seccion||'')).replace(/[^A-Za-z0-9]+/g,'-').replace(/-+/g,'-').replace(/-$/,'')+'.docx';
+  let nombre=('LOA-05_'+(d.codificacion||'curso')+'-'+(d.seccion||'')+'_CRN'+(d.crn||'')).replace(/[^A-Za-z0-9]+/g,'-').replace(/-+/g,'-').replace(/-$/,'')+'.docx';
   await entregar(blob, nombre);
   await enviarADrive(zip, nombre, d);
 }
@@ -894,14 +894,14 @@ async function subirEvidencias(){
   const files=input.files ? [...input.files] : [];
   if(!DRIVE_CONFIG.url){ estadoE.textContent='La subida a Google Drive no está configurada en esta página.'; estadoE.className='estado'; return; }
   if(!files.length){ estadoE.textContent='Seleccione al menos un archivo de evidencia.'; estadoE.className='estado'; return; }
-  const cod=val('codificacion'), sec=val('seccion'), prof=val('profesor');
-  if(!cod || !sec || !prof){
-    estadoE.textContent='Antes de subir evidencia, complete la codificación, la sección y el profesor del curso (sección 2).';
+  const crn=val('crn'), cod=val('codificacion'), sec=val('seccion'), prof=val('profesor');
+  if(!crn || !cod || !sec || !prof){
+    estadoE.textContent='Antes de subir evidencia, complete el CRN, la codificación, la sección y el profesor del curso (sección 2).';
     estadoE.className='estado';
-    document.getElementById('codificacion').scrollIntoView({behavior:'smooth', block:'center'});
+    document.getElementById('crn').scrollIntoView({behavior:'smooth', block:'center'});
     return;
   }
-  const prefijo=(cod+'-'+sec+'_'+prof).replace(/[^A-Za-z0-9ÁÉÍÓÚÑáéíóúñ]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  const prefijo=(cod+'-'+sec+'_CRN'+crn+'_'+prof).replace(/[^A-Za-z0-9ÁÉÍÓÚÑáéíóúñ]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
   const MAX=15*1024*1024;
   const btn=document.getElementById('btnSubirEvidencia');
   btn.disabled=true;
