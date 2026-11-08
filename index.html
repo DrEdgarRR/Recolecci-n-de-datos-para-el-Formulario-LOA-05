@@ -921,6 +921,7 @@ async function subirEvidencias(){
       const fd=new FormData();
       fd.append('action','evidencia');
       fd.append('secret', DRIVE_CONFIG.secret);
+      fd.append('college', val('college'));
       fd.append('filename', prefijo+'_'+f.name);
       fd.append('contentType', f.type||'');
       fd.append('fileBase64', b64);
